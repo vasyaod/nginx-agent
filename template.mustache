@@ -1,0 +1,11 @@
+upstream {{serviceName}} {
+{{#nodes}}
+    server {{host}}:{{port}};
+{{/nodes}}
+}
+
+map $args ${{serviceNameUnderscore}}_host {
+{{#nodes}}
+    ~(.*)nodeId={{nodeId}}(.*) {{host}}:{{port}};
+{{/nodes}}
+}
