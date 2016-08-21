@@ -18,7 +18,40 @@ was used for discovering instead of Apache Zookeeper.
  * Run the app by `java -Dconfig.file=nginx-agent.conf -cp "target/lib/*" ru.mobak.nginxagent.App` where `nginx-agent.conf` is
    our configuration for Nginx Agent.
 
-##Configuration
+## Principal
+
+Assume there is some service (in this example the service is called as `battle-dev`) with following configuration of nodes:
+
+```bash
+[nginx-agent]$ nslookup -type=SRV _battle-dev._tcp.marathon.mesos
+Server:         192.168.100.1
+Address:        192.168.100.1#53
+
+_battle-dev._tcp.marathon.mesos service = 0 0 31585 battle-dev-atfbu-s8.marathon.slave.mesos.
+_battle-dev._tcp.marathon.mesos service = 0 0 31934 battle-dev-cjq9x-s9.marathon.slave.mesos.
+_battle-dev._tcp.marathon.mesos service = 0 0 31270 battle-dev-dy91w-s8.marathon.slave.mesos.
+```
+Nginx Agent should create following config file:
+
+```bash
+[services-conf]# cat /etc/nginx/services-conf/battle-dev.conf
+upstream battle-dev {
+    server battle-dev-dy91w-s8.marathon.slave.mesos.:31270;
+    server battle-dev-atfbu-s8.marathon.slave.mesos.:31585;
+    server battle-dev-cjq9x-s9.marathon.slave.mesos.:31934;
+}
+
+map $args $battle_dev_host {
+    ~(.*)nodeId=6ca4f4b8(.*) battle-dev-dy91w-s8.marathon.slave.mesos.:31270;
+    ~(.*)nodeId=d22b8e23(.*) battle-dev-atfbu-s8.marathon.slave.mesos.:31585;
+    ~(.*)nodeId=f0e38509(.*) battle-dev-cjq9x-s9.marathon.slave.mesos.:31934;
+}
+```
+That is, how you can see, two objects have been created:
+ * upstream `battle-dev`
+ * and map for variable `$battle_dev_host`
+
+##Nginx Agent Configuration
 
 ### Minimal configuration
 
@@ -58,6 +91,34 @@ nginx-agent {
   hash-type = "md5"
 
   services = [ ]
+}
+```
+##Nginx Configuration
+
+### Load Balancing
+
+For balancing of load to nodes upstreams can be used which is contained within `/etc/nginx/services-conf/*.conf`
+
+```
+server {
+    location / {
+        proxy_pass         http://battle-dev;
+    }
+}
+```
+
+### Routing to single node by nodeId
+
+There is a approach to have access to a single node by a **nodeId** using special URL parameter _nodeId_
+(for example: `http://battle-dev.domain.com?nodeId=f0e38509`)
+
+Parameter **nodeId** is hash function (standard java hash code or md5) from string "battle-dev-cjq9x-s9.marathon.slave.mesos.:31934"
+
+```
+server {
+    location / {
+        proxy_pass         http://$battle_dev_host;
+    }
 }
 ```
 
