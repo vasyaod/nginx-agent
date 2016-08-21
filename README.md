@@ -15,7 +15,7 @@ was used for discovering instead of Apache Zookeeper.
    Default value is `/etc/nginx/services-conf` and the directory can be created by `mkdir /etc/nginx/services-conf`
  * The configuration directory should be included in a Nginx config by the directive `include /etc/nginx/services-conf/*.conf`
  * Create some minimal config for Nginx Agent
- * Run the app by `java -Dconfig.file=nginx-agent.conf -cp "./lib/*" ru.mobak.nginxagent.App` where `nginx-agent.conf` is
+ * Run the app by `java -Dconfig.file=nginx-agent.conf -cp "target/lib/*" ru.mobak.nginxagent.App` where `nginx-agent.conf` is
    our configuration for Nginx Agent.
 
 ##Configuration
@@ -62,7 +62,7 @@ nginx-agent {
 ```
 
 ##License
-Copyright 2014 Michael Rose
+Copyright 2016 Vasiliy Vazhesov (vasiliy.vazhesov@gmail.com)
 
 Licensed under the Apache License, Version 2.0 (the "License"); you may not use this work except in compliance with the
  License. You may obtain a copy of the License in the LICENSE file, or at:
