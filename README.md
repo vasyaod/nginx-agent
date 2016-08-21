@@ -84,9 +84,6 @@ nginx-agent {
   default-server = "127.0.0.1"
   default-port = 80
 
-  # Suffix of domain, for example, if we have record _service1._tcp.marathon.mesos that a suffix is "marathon.mesos"
-  domain-suffix = "marathon.mesos"
-
   # Hash algorithm for node ID generation. Two type of hash function is supported:
   #  * "java" - standart java hash code
   #  * "md5"
@@ -94,6 +91,14 @@ nginx-agent {
 
   # Secret key which is necessary for hash generation of nodeId.
   secret-key = ""
+
+  dns {
+    # Suffix of domain, for example, if we have record _service1._tcp.marathon.mesos that a suffix is "marathon.mesos"
+    domain-suffix = "marathon.mesos"
+
+    # Period (seconds) between requests to a DNS server.
+    refresh-period = 5
+  }
 
   services = [ ]
 }

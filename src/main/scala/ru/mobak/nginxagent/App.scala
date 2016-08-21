@@ -30,8 +30,9 @@ object App extends App with LazyLogging {
     .dnsLookupTimeoutMillis(1000)
     .build()
 
+  val refreshPeriod = config.getInt("nginx-agent.dns.refresh-period")
   val watcher = DnsSrvWatchers.newBuilder(resolver)
-    .polling(1, TimeUnit.SECONDS)
+    .polling(refreshPeriod, TimeUnit.SECONDS)
     .build()
 
   ////
@@ -58,7 +59,7 @@ object App extends App with LazyLogging {
         // Путь к файлу с шаблонами берем из настроек.
         config.getString("nginx-agent.template-path")
       ),
-      config.getString("nginx-agent.domain-suffix"),
+      config.getString("nginx-agent.dns.domain-suffix"),
       config.getString("nginx-agent.hash-type"),
       config.getString("nginx-agent.config-path"),
       secretKey = config.getString("nginx-agent.secret-key"),
@@ -70,12 +71,11 @@ object App extends App with LazyLogging {
 
   // Set hook for PERM signal.
   def shutdown(): Unit = {
-    Await.result(as.terminate(), 2.minutes)
+    Await.result(as.terminate(), 1.minutes)
 
     watcher.close()
 
     logger.info("Agent has been terminated")
-    println("Agent has been terminated")
   }
   Runtime.getRuntime.addShutdownHook(new Thread { override def run(): Unit = shutdown() })
 }
