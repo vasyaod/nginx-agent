@@ -92,6 +92,9 @@ nginx-agent {
   #  * "md5"
   hash-type = "md5"
 
+  # Secret key which is necessary for hash generation of nodeId.
+  secret-key = ""
+
   services = [ ]
 }
 ```
@@ -114,15 +117,21 @@ server {
 There is a approach to have access to a single node by a **nodeId** using special URL parameter _nodeId_
 (for example: `http://battle-dev.domain.com?nodeId=b59102f182b8d9a90cf64d8952ce3a3a`)
 
-Parameter **nodeId** is hash function (standard java hash code or md5) by string concatenation: _"192.168.100.12" + "31934" + "some-secret-key"_
+Parameter **nodeId** is hash function (default: md5) by string concatenation: _"192.168.100.12" +
+"31934" + "some-secret-key"_. Default secret key is empty see property `nginx-agent.secret-key`
 
 ```
 server {
+    server_name   battle-dev.domain.com;
+
     location / {
         proxy_pass         http://$battle_dev_host;
     }
 }
 ```
+**Caveat:** if we going to use "access to concrete node", please, change secret-key to our value otherwise it will be possible
+            to research our inner-network structure by busting of typical ip addresses.
+
 ## Default template
 
 Mustache template is used for creation of Nginx configuration files. Default template is contained inside of the jar,
