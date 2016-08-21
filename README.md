@@ -57,7 +57,7 @@ That is, how you can see, two objects have been created:
 
 Minimal configuration is list of services which should be listened.
 
-```javastript
+```
 nginx-agent {
 
   services = ["serice1", "service2"]
@@ -66,7 +66,7 @@ nginx-agent {
 
 ### Default configuration
 
-```javastript
+```
 nginx-agent {
 
   # Path to file that contains PID of Nginx. This option needs for refreshing configuration of Nginx in runtime by
@@ -76,8 +76,8 @@ nginx-agent {
   # Path to where generated configs are
   config-path = "/etc/nginx/services-conf"
 
-  # Path to a template that will be used for generation of configs in "config-path" directory.
-  template-path = "template.mustache"
+  # Path to a template that will be used for generation of configs in "nginx-agent.config-path" directory.
+  template-path = "default-template.mustache"
 
   # If there is no any node for a service in DNS then default server and port will be set. In one hand nginx can not work
   # with empty upstreams, in another hand it allow to us show some stub page if the service is down.
@@ -119,6 +119,25 @@ server {
     location / {
         proxy_pass         http://$battle_dev_host;
     }
+}
+```
+## Default template
+
+Mustache template is used for creation of Nginx configuration files. Default template is contained inside of the jar,
+it is possible to change a path to the file by property `nginx-agent.template-path` but usual there is no necessary
+to edit this:
+
+```
+upstream {{serviceName}} {
+{{#nodes}}
+    server {{host}}:{{port}};
+{{/nodes}}
+}
+
+map $args ${{serviceNameUnderscore}}_host {
+{{#nodes}}
+    ~(.*)nodeId={{nodeId}}(.*) {{host}}:{{port}};
+{{/nodes}}
 }
 ```
 
