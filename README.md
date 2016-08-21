@@ -36,15 +36,15 @@ Nginx Agent should create following config file:
 ```bash
 [services-conf]# cat /etc/nginx/services-conf/battle-dev.conf
 upstream battle-dev {
-    server battle-dev-dy91w-s8.marathon.slave.mesos.:31270;
-    server battle-dev-atfbu-s8.marathon.slave.mesos.:31585;
-    server battle-dev-cjq9x-s9.marathon.slave.mesos.:31934;
+    server 192.168.100.11:31934;
+    server 192.168.100.5:31270;
+    server 192.168.100.12:31585;
 }
 
 map $args $battle_dev_host {
-    ~(.*)nodeId=6ca4f4b8(.*) battle-dev-dy91w-s8.marathon.slave.mesos.:31270;
-    ~(.*)nodeId=d22b8e23(.*) battle-dev-atfbu-s8.marathon.slave.mesos.:31585;
-    ~(.*)nodeId=f0e38509(.*) battle-dev-cjq9x-s9.marathon.slave.mesos.:31934;
+    ~(.*)nodeId=78eeabce9bdf233fcb6e8b69bfc438a6(.*) 192.168.100.11:31934;
+    ~(.*)nodeId=611958bd8b7c318ffb8aa744fca9b2df(.*) 192.168.100.5:31270;
+    ~(.*)nodeId=b59102f182b8d9a90cf64d8952ce3a3a(.*) 192.168.100.12:31585;
 }
 ```
 That is, how you can see, two objects have been created:
@@ -87,7 +87,9 @@ nginx-agent {
   # Suffix of domain, for example, if we have record _service1._tcp.marathon.mesos that a suffix is "marathon.mesos"
   domain-suffix = "marathon.mesos"
 
-  # Hash algorithm for node ID generation.
+  # Hash algorithm for node ID generation. Two type of hash function is supported:
+  #  * "java" - standart java hash code
+  #  * "md5"
   hash-type = "md5"
 
   services = [ ]
@@ -110,9 +112,9 @@ server {
 ### Routing to single node by nodeId
 
 There is a approach to have access to a single node by a **nodeId** using special URL parameter _nodeId_
-(for example: `http://battle-dev.domain.com?nodeId=f0e38509`)
+(for example: `http://battle-dev.domain.com?nodeId=b59102f182b8d9a90cf64d8952ce3a3a`)
 
-Parameter **nodeId** is hash function (standard java hash code or md5) from string "battle-dev-cjq9x-s9.marathon.slave.mesos.:31934"
+Parameter **nodeId** is hash function (standard java hash code or md5) by string concatenation: _"192.168.100.12" + "31934" + "some-secret-key"_
 
 ```
 server {

@@ -1,6 +1,7 @@
 package ru.mobak.nginxagent
 
 import java.io.{File, FileWriter}
+import java.net.InetAddress
 
 import akka.actor.{Actor, ActorRef}
 import com.github.mustachejava.Mustache
@@ -9,21 +10,17 @@ import com.spotify.dns.{ChangeNotifier, DnsSrvResolver, DnsSrvWatcher, LookupRes
 import com.typesafe.scalalogging.LazyLogging
 
 object DnsConfigurationGenerator {
-  /**
-    * Данные классы нужны для шаблонизатора, мы их используем как модель.
-    */
+  /** The class is needed for mustache template as a model. */
   case class Config(serviceName: String, serviceNameUnderscore: String, nodes: Array[Node])
 
-  /**
-    * Данные классы нужны для шаблонизатора, мы их используем как модель.
-    */
+  /** The class is needed for mustache template as a model. */
   case class Node(host: String, port: Int, nodeId: String)
 
   def md5hash(s: String) = {
     val m = java.security.MessageDigest.getInstance("MD5")
     val b = s.getBytes("UTF-8")
     m.update(b, 0, b.length)
-    new java.math.BigInteger(1, m.digest()).toString(16)
+    new java.math.BigInteger(1, m.digest()).toString(16).toLowerCase
   }
 }
 
@@ -35,6 +32,7 @@ class DnsConfigurationGenerator(resolver: DnsSrvResolver,
                                 domainSuffix: String,
                                 hashType: String,
                                 configPath: String,
+                                secretKey: String,
                                 defaultServer: String,
                                 defaultPort: Int,
                                 nginxManager: ActorRef) extends Actor with LazyLogging {
@@ -68,13 +66,17 @@ class DnsConfigurationGenerator(resolver: DnsSrvResolver,
     case Reconfigure(newLookupResults) =>
 
       val nodes = newLookupResults.map { lookupResult =>
+
+        val ip: String = InetAddress.getByName(lookupResult.host()).getHostAddress
+        val port: Int = lookupResult.port()
+
         val hash =
           if (hashType == "java")
-            Integer.toHexString((lookupResult.host() + ":" + lookupResult.port()).hashCode)
+            Integer.toHexString((ip + port + secretKey).hashCode)
           else
-            DnsConfigurationGenerator.md5hash(lookupResult.host() + ":" + lookupResult.port())
+            DnsConfigurationGenerator.md5hash(ip + port + secretKey)
 
-        DnsConfigurationGenerator.Node(lookupResult.host(), lookupResult.port(), hash)
+        DnsConfigurationGenerator.Node(ip, port, hash)
       }.toArray
 
       val confFile = new File(s"$configPath/$serviceName.conf")

@@ -61,9 +61,10 @@ object App extends App with LazyLogging {
       config.getString("nginx-agent.domain-suffix"),
       config.getString("nginx-agent.hash-type"),
       config.getString("nginx-agent.config-path"),
-      config.getString("nginx-agent.default-server"),
-      config.getInt("nginx-agent.default-port"),
-      nginxManager
+      secretKey = config.getString("nginx-agent.secret-key"),
+      defaultServer = config.getString("nginx-agent.default-server"),
+      defaultPort = config.getInt("nginx-agent.default-port"),
+      nginxManager = nginxManager
     )))
   }
 
