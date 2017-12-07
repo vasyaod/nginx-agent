@@ -125,6 +125,7 @@ class MarathonResolver(marathonUrls: List[String],
     implicit val ec = context.dispatcher
     // Periodically
     refreshTask = Some(context.system.scheduler.schedule(updatePeriod.seconds, updatePeriod.seconds, self, Refresh))
+    self ! Refresh
   }
 
   override def postStop(): Unit = {
@@ -138,7 +139,11 @@ class MarathonResolver(marathonUrls: List[String],
       implicit val ec = context.dispatcher
 
       MarathonApi.allNodes(marathonUrls).foreach { rewServices =>
-        val aveilableServices = rewServices.map(service => service.copy(id = if (service.id.startsWith("/")) service.id.drop(1) else service.id.split("/").reverse.mkString("-")))
+        val aveilableServices = rewServices.map(service =>
+          // Here we transform service name, for example like "/dev/someservice" to "someservice-dev"
+          service.copy(id = (if (service.id.startsWith("/")) service.id.drop(1) else service.id).split("/").reverse.mkString("-"))
+        )
+        println(aveilableServices.map(_.id))
         services.foreach { service =>
           aveilableServices.find(_.id == service) match {
             case Some(service) =>
