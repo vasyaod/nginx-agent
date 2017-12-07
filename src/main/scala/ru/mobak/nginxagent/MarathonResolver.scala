@@ -143,7 +143,6 @@ class MarathonResolver(marathonUrls: List[String],
           // Here we transform service name, for example like "/dev/someservice" to "someservice-dev"
           service.copy(id = (if (service.id.startsWith("/")) service.id.drop(1) else service.id).split("/").reverse.mkString("-"))
         )
-        println(aveilableServices.map(_.id))
         services.foreach { service =>
           aveilableServices.find(_.id == service) match {
             case Some(service) =>
