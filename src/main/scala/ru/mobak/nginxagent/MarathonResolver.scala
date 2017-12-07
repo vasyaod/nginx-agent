@@ -61,7 +61,11 @@ object MarathonApi {
     } else {
       res.recoverWith {
         case t: Throwable =>
-          tasks(appId, urls.head, urls.tail)
+          if(urls.isEmpty) {
+            Future.failed(t)
+          } else {
+            tasks(appId, urls.head, urls.tail)
+          }
       }
     }
   }
@@ -83,7 +87,11 @@ object MarathonApi {
     } else {
       res.recoverWith {
         case t: Throwable =>
-          apps(urls.head, urls.tail)
+          if(urls.isEmpty) {
+            Future.failed(t)
+          } else {
+            apps(urls.head, urls.tail)
+          }
       }
     }
   }
