@@ -76,7 +76,7 @@ nginx-agent {
   # Path to where generated configs are
   config-path = "/etc/nginx/services-conf"
 
-  # Path to a template that will be used for generation of configs in "nginx-agent.config-path" directory.
+  # Path to a template that will be used for generation of configs in "config-path" directory.
   template-path = "default-template.mustache"
 
   # If there is no any node for a service in DNS then default server and port will be set. In one hand nginx can not work
@@ -92,6 +92,11 @@ nginx-agent {
   # Secret key which is necessary for hash generation of nodeId.
   secret-key = ""
 
+  # Resolve method:
+  # - marathon
+  # - dns
+  resolver = "dns"
+
   dns {
     # Suffix of domain, for example, if we have record _service1._tcp.marathon.mesos that a suffix is "marathon.mesos"
     domain-suffix = "marathon.mesos"
@@ -100,9 +105,20 @@ nginx-agent {
     refresh-period = 5
   }
 
+  # Configuration for marathon resolver
+  marathon = {
+    # List of marathon nodes.
+    urls = ["127.0.0.1:8080"]
+
+    # Period (seconds) between requests to marathon API.
+    refresh-period = 5
+  }
+
   services = [ ]
+
 }
 ```
+
 ##Nginx Configuration
 
 ### Load Balancing
@@ -156,11 +172,11 @@ map $args ${{serviceNameUnderscore}}_host {
 {{/nodes}}
 }
 ```
-##Contributors
+## Contributors
 
  * Vasiliy Vazhesov (vasiliy.vazhesov@gmail.com)
 
-##License
+## License
 
 Copyright 2016
 
