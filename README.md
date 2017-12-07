@@ -156,12 +156,13 @@ map $args ${{serviceNameUnderscore}}_host {
 {{/nodes}}
 }
 ```
+##Contributors
+
+ * Vasiliy Vazhesov (vasiliy.vazhesov@gmail.com)
 
 ##License
+
 Copyright 2016
- * Vasiliy Vazhesov (vasiliy.vazhesov@gmail.com)
- * http://lordmancer2.com
- * http://mobak.ru
 
 Licensed under the Apache License, Version 2.0 (the "License"); you may not use this work except in compliance with the
  License. You may obtain a copy of the License in the LICENSE file, or at:
