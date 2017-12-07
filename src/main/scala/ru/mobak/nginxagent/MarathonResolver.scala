@@ -51,12 +51,9 @@ object MarathonApi {
 
   def tasks(appId: String, url: String, urls: List[String])(implicit as: ActorSystem): Future[Tasks] = {
     implicit val ec = as.dispatcher
-    println()
     val p =
       sendReceive  ~>
       unmarshal[Tasks]
-
-//    println("TASK URL:" + s"http://$url/apps/$appId/tasks")
 
     val res = p(Get(s"http://$url/v2/apps/$appId/tasks"))
     if (urls.isEmpty) {
