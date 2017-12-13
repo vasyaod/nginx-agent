@@ -21,19 +21,21 @@ trait MarathonApi {
 object MarathonApi {
 
   /** App description */
-  case class App(id: String)
+  case class App(id: String, labels: Map[String, String])
 
   /** List of all apps runned by Marathon */
   case class Apps(apps: Seq[App])
 
+  case class HealthCheckResult(alive: Boolean)
+
   /** Task description for some app */
-  case class Task(host: String, ports: Seq[Int])
+  case class Task(host: String, ports: Seq[Int], healthCheckResults: Seq[HealthCheckResult])
 
   /** List of tasks for some app */
   case class Tasks(tasks: Seq[Task])
 
   case class Node(host: String, port: Int)
-  case class Service(id: String, nodes: Iterable[Node])
+  case class Service(id: String, labels: Map[String, String], nodes: Iterable[Node])
 
   val mapper: ObjectMapper = new ObjectMapper()
     .registerModule(DefaultScalaModule)
@@ -103,11 +105,12 @@ object MarathonApi {
       apps <- apps(urls)
       services <- Future.sequence(
         apps.apps.map(app => tasks(app.id, urls).map { tasks =>
-          Service(app.id, tasks.tasks.flatMap { task =>
-            if(task.ports.isEmpty)
-              None
-            else
+          Service(app.id, app.labels, tasks.tasks.flatMap { task =>
+            val isHealth = task.healthCheckResults.foldLeft(true)((acc, x) => x.alive && acc)
+            if(task.ports.nonEmpty && isHealth)
               Some(Node(task.host, task.ports.head))
+            else
+              None
           })
         })
       )
@@ -118,7 +121,8 @@ object MarathonApi {
 /** The actor refresh Nginx configuration by Marathon API. */
 class MarathonResolver(marathonUrls: List[String],
                        updatePeriod: Int,
-                       services: List[String],
+                       registredServices: List[String],
+                       balancerId: String,
                        configurationGenerator: ActorRef) extends Actor with LazyLogging {
 
   case object Refresh
@@ -143,21 +147,19 @@ class MarathonResolver(marathonUrls: List[String],
       implicit val as = context.system
       implicit val ec = context.dispatcher
 
-      MarathonApi.allNodes(marathonUrls).foreach { rewServices =>
-        val aveilableServices = rewServices.map(service =>
-          // Here we transform service name, for example like "/dev/someservice" to "someservice-dev"
-          service.copy(id = (if (service.id.startsWith("/")) service.id.drop(1) else service.id).split("/").reverse.mkString("-"))
-        )
-        services.foreach { service =>
-          aveilableServices.find(_.id == service) match {
-            case Some(service) =>
-              configurationGenerator ! ConfigurationGenerator.SetConfiguration(service.id, service.nodes.map { node =>
-                ConfigurationGenerator.Node(InetAddress.getByName(node.host).getHostAddress, node.port)
-              }.toSet)
-            case None =>
-              configurationGenerator ! ConfigurationGenerator.SetConfiguration(service, Set())
+      MarathonApi.allNodes(marathonUrls).foreach { rawServices =>
+        val res = rawServices.flatMap { service =>
+          val serviceId = (if (service.id.startsWith("/")) service.id.drop(1) else service.id).split("/").reverse.mkString("-")
+          if (registredServices.contains(serviceId) || service.labels.get("BALANCER") == Some(balancerId)) {
+            Some((serviceId, service.nodes.map { node =>
+              ConfigurationGenerator.Node(InetAddress.getByName(node.host).getHostAddress, node.port)
+            }.toSet))
+          } else {
+            None
           }
         }
+
+        configurationGenerator ! ConfigurationGenerator.SetConfigurations(res.toMap)
       }
   }
 }

@@ -67,8 +67,9 @@ object App extends App with LazyLogging {
 
     as.actorOf(Props(new MarathonResolver(
       marathonUrls = config.getStringList("nginx-agent.marathon.urls").asScala.toList,
-      services = config.getStringList("nginx-agent.services").asScala.toList,
+      registredServices = config.getStringList("nginx-agent.services").asScala.toList,
       updatePeriod = config.getInt("nginx-agent.marathon.refresh-period"),
+      balancerId = config.getString("nginx-agent.marathon.balancer-id"),
       configurationGenerator = configurationGenerator
     )))
   }

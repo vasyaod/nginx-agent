@@ -14,6 +14,9 @@ object ConfigurationGenerator {
   /** Command that set new configuration */
   case class SetConfiguration(serviceName: String, nodes: Set[Node])
 
+  /** Command that set new configurations for all services */
+  case class SetConfigurations(consfigurations: Map[String, Set[Node]])
+
   def md5hash(s: String) = {
     val m = java.security.MessageDigest.getInstance("MD5")
     val b = s.getBytes("UTF-8")
@@ -95,6 +98,17 @@ class ConfigurationGenerator(mustache: Mustache,
 
         logger.info(s"Reconfigure for service: $serviceName")
         nginxManager ! NginxManager.Refresh
+      }
+
+    case ConfigurationGenerator.SetConfigurations(services) =>
+      configuration.foreach { case (serviceName, _) =>
+        if (!services.contains(serviceName)) {
+          ConfigurationGenerator.SetConfiguration(serviceName, Set())
+        }
+      }
+
+      services.toSeq.foreach { case (serviceName, nodes) =>
+        self ! ConfigurationGenerator.SetConfiguration(serviceName, nodes)
       }
   }
 }

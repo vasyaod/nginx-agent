@@ -112,6 +112,9 @@ nginx-agent {
 
     # Period (seconds) between requests to marathon API.
     refresh-period = 5
+    
+    # Balancer ID.
+    balancer-id = "primary"    
   }
 
   services = [ ]
