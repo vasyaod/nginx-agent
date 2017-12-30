@@ -1,8 +1,13 @@
 # Nginx Agent
 
-The single goal of the project is transmitting DNS records (SRV type) to nginx configuration. It can be
+Since version 2.0 nginx-agent began support Marathon API.
+
+In case of using MesosDNS the project is transmitting DNS records (SRV type) to nginx configuration. It can be
 useful if there is some container manager system with DNS supporting for example Mesos + MesosDNS and you
 want use Nginx as load balancer or some gate for access to nodes.
+
+In another hand, Marathon API can be used as a service discovery. But also this approach has some advantage we can 
+configure NGINX directly from marathon json.  
 
 The project was inspired by https://github.com/Xorlev/gatekeeper but the one has quite wide ability since DNS
 was used for discovering instead of Apache Zookeeper.
@@ -51,18 +56,41 @@ That is, how you can see, two objects have been created:
  * upstream `battle-dev`
  * and map for variable `$battle_dev_host`
 
-##Nginx Agent Configuration
+## Nginx Agent Configuration
 
 ### Minimal configuration
 
-Minimal configuration is list of services which should be listened.
+### Minimal configuration for MesosDNS
+
+Minimal configuration for Mesos DNS is list of services which should be listened.  Please notice that in case of DNS 
+we should obligatory set up list of all services which we want to monitor.
 
 ```
 nginx-agent {
 
+  resolver = "dns"
+  
   services = ["serice1", "service2"]
 }
 ```
+
+### Minimal configuration for Marathon API
+
+```
+nginx-agent {
+
+  resolver = "marathon"
+
+  marathon {
+    # List of marathon servers
+    urls = ["127.0.0.1:8080"]
+  }
+  
+  # In marathon case this parameter is optional since we can mark service from marathon json.
+  services = ["serice1", "service2"]
+}
+```
+
 
 ### Default configuration
 
@@ -118,11 +146,10 @@ nginx-agent {
   }
 
   services = [ ]
-
 }
 ```
 
-##Nginx Configuration
+## Nginx Configuration
 
 ### Load Balancing
 
