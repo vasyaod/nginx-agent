@@ -104,8 +104,12 @@ nginx-agent {
   # Path to where generated configs are
   config-path = "/etc/nginx/services-conf"
 
-  # Path to a template that will be used for generation of configs in "config-path" directory.
-  template-path = "default-template.mustache"
+  # URL to a template that will be used for generation of configs in "config-path" directory.
+  #
+  # Examples of urls:
+  #  - "file:example-template.mustache" - template in file system
+  #  - "https://raw.githubusercontent.com/vasyaod/nginx-agent/master/example-template.mustache" - template in file system
+  template-url = "default-template.mustache"
 
   # If there is no any node for a service in DNS then default server and port will be set. In one hand nginx can not work
   # with empty upstreams, in another hand it allow to us show some stub page if the service is down.
@@ -190,17 +194,29 @@ it is possible to change a path to the file by property `nginx-agent.template-pa
 to edit this:
 
 ```
-upstream {{serviceName}} {
-{{#nodes}}
-    server {{host}}:{{port}};
-{{/nodes}}
+upstream {{SERVICE_NAME}} {
+{{#NODES}}
+    server {{HOST}}:{{PORT}};
+{{/NODES}}
 }
 
-map $args ${{serviceNameUnderscore}}_host {
-{{#nodes}}
-    ~(.*)nodeId={{nodeId}}(.*) {{host}}:{{port}};
-{{/nodes}}
+map $args ${{SERVICE_NAME_UNDERSCORE}}_host {
+{{#NODES}}
+    ~(.*)nodeId={{NODE_ID}}(.*) {{HOST}}:{{PORT}};
+{{/NODES}}
 }
+
+{{#SERVER_CONFIG}}
+# This part of config is relevant only for Marathon API resolver.
+server {
+    listen 0.0.0.0:80;
+    server_name {{SERVER_NAME}};
+
+    location / {
+        proxy_pass http://{{SERVICE_NAME}};
+    }
+}
+{{/SERVER_CONFIG}}
 ```
 ## Contributors
 
@@ -208,13 +224,24 @@ map $args ${{serviceNameUnderscore}}_host {
 
 ## License
 
-Copyright 2016
+The MIT License
 
-Licensed under the Apache License, Version 2.0 (the "License"); you may not use this work except in compliance with the
- License. You may obtain a copy of the License in the LICENSE file, or at:
+Copyright (c) 2016-present Vasiliy Vazhesov (vasiliy.vazhesov@gmail.com)
 
-http://www.apache.org/licenses/LICENSE-2.0
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
 
-Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an
-"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific
- language governing permissions and limitations under the License.
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.

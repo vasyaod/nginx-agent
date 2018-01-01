@@ -23,11 +23,7 @@ object App extends App with LazyLogging {
   )))
 
   val configurationGenerator = as.actorOf(Props(new ConfigurationGenerator(
-    // Инициализуруем шаблонизатор.
-    mustache = new DefaultMustacheFactory().compile(
-      // Путь к файлу с шаблонами берем из настроек.
-      config.getString("nginx-agent.template-path")
-    ),
+    defaultTemplateUrl = config.getString("nginx-agent.template-url"),
     hashType = config.getString("nginx-agent.hash-type"),
     configPath = config.getString("nginx-agent.config-path"),
     secretKey = config.getString("nginx-agent.secret-key"),

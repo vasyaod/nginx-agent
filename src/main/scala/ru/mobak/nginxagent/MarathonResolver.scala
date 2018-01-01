@@ -151,15 +151,41 @@ class MarathonResolver(marathonUrls: List[String],
         val res = rawServices.flatMap { service =>
           val serviceId = (if (service.id.startsWith("/")) service.id.drop(1) else service.id).split("/").reverse.mkString("-")
           if (registredServices.contains(serviceId) || service.labels.get("BALANCER") == Some(balancerId)) {
-            Some((serviceId, service.nodes.map { node =>
-              ConfigurationGenerator.Node(InetAddress.getByName(node.host).getHostAddress, node.port)
-            }.toSet))
+            val additionalParams = service.labels.flatMap { case (key, value) =>
+              val prefix = "BALANCER_PARAM_"
+              if (key.startsWith(prefix)) {
+                val newKey = key.replace(prefix, "")
+                Some((newKey, value))
+              } else {
+                None
+              }
+            }
+
+            val templateOpt = service.labels.toSeq.flatMap { case (key, value) =>
+              val prefix = "BALANCER_TEMPLATE"
+              if (key.startsWith(prefix)) {
+                Some(value)
+              } else {
+                None
+              }
+            }.headOption
+
+            Some(
+              ConfigurationGenerator.Configuration(
+                serviceId,
+                service.nodes.map { node =>
+                  ConfigurationGenerator.Node(InetAddress.getByName(node.host).getHostAddress, node.port)
+                }.toSet,
+                additionalParams,
+                templateOpt
+              )
+            )
           } else {
             None
           }
         }
 
-        configurationGenerator ! ConfigurationGenerator.SetConfigurations(res.toMap)
+        configurationGenerator ! ConfigurationGenerator.SetConfigurations(res.toSet)
       }
   }
 }

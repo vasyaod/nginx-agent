@@ -1,21 +1,31 @@
 package ru.mobak.nginxagent
 
-import java.io.{File, FileWriter}
+import java.io.{File, FileNotFoundException, FileWriter}
+import java.net.URL
 
 import akka.actor.{Actor, ActorRef}
-import com.github.mustachejava.Mustache
+import com.github.mustachejava.resolver.FileSystemResolver
+import com.github.mustachejava.{DefaultMustacheFactory, Mustache, MustacheFactory}
 import com.typesafe.scalalogging.LazyLogging
+import org.apache.commons.io.FileUtils
 import org.apache.commons.io.filefilter.WildcardFileFilter
+
+import scala.collection.JavaConverters._
 
 object ConfigurationGenerator {
 
   case class Node(host: String, port: Int)
 
+  case class Configuration(serviceName: String,
+                           nodes: Set[Node],
+                           additionalParams: Map[String, String] = Map(),
+                           templateUrl: Option[String] = None)
+
   /** Command that set new configuration */
-  case class SetConfiguration(serviceName: String, nodes: Set[Node])
+  case class SetConfiguration(configuration: Configuration)
 
   /** Command that set new configurations for all services */
-  case class SetConfigurations(consfigurations: Map[String, Set[Node]])
+  case class SetConfigurations(consfigurations: Set[Configuration])
 
   def md5hash(s: String) = {
     val m = java.security.MessageDigest.getInstance("MD5")
@@ -27,25 +37,27 @@ object ConfigurationGenerator {
 
 object MustacheModel {
   /** The class is needed for mustache template as a model. */
-  case class Config(serviceName: String, serviceNameUnderscore: String, nodes: Array[Node])
+  case class Config(SERVICE_NAME: String, SERVICE_NAME_UNDERSCORE: String, NODES: Array[Node])
 
   /** The class is needed for mustache template as a model. */
-  case class Node(host: String, port: Int, nodeId: String)
+  case class Node(HOST: String, PORT: Int, NODE_ID: String)
 }
 
 /** The actor refresh Nginx configuration. */
-class ConfigurationGenerator(mustache: Mustache,
+class ConfigurationGenerator(defaultTemplateUrl: String,
                              hashType: String,
                              configPath: String,
                              secretKey: String,
                              defaultServer: String,
                              defaultPort: Int,
                              nginxManager: ActorRef) extends Actor with LazyLogging {
+  val mustacheFactory: MustacheFactory = new DefaultMustacheFactory(new FileSystemResolver(new File("/")))
 
-  var configuration: Map[String, Set[ConfigurationGenerator.Node]] = Map()
+  var configurationCache: Map[String, ConfigurationGenerator.Configuration] = Map()
+  var filesCache: Map[String, File] = Map()
 
   override def preStart(): Unit = {
-    configuration = Map()
+    configurationCache = Map()
 
     ////
     // Remove our old nginx-configs if of cause there are it.
@@ -62,11 +74,40 @@ class ConfigurationGenerator(mustache: Mustache,
 
   override def receive: Receive = {
 
-    case ConfigurationGenerator.SetConfiguration(serviceName, _nodes) =>
-      if (!configuration.contains(serviceName) || (configuration.contains(serviceName) && configuration(serviceName) != _nodes)) {
-        configuration = configuration + (serviceName -> _nodes)
+    case ConfigurationGenerator.SetConfiguration(configuration) =>
 
-        val nodes = _nodes.map { node =>
+      val serviceName = configuration.serviceName
+
+      if (!configurationCache.contains(configuration.serviceName) || (configurationCache.contains(serviceName) && configurationCache(serviceName) != configuration)) {
+      configurationCache = configurationCache + (serviceName -> configuration)
+
+        def tmpFile(templatePath: String) = {
+          filesCache.get(templatePath) match {
+            case Some(x) => x
+            case None =>
+
+              val resUrl = getClass().getClassLoader().getResource(templatePath)
+              val url = if (resUrl == null) new URL(templatePath) else resUrl
+
+              val temp = File.createTempFile("template", ".mustache")
+              FileUtils.copyURLToFile(url, temp)
+              filesCache = filesCache + (templatePath -> temp)
+              temp
+          }
+        }
+
+        val templateUrl = configuration.templateUrl.getOrElse(defaultTemplateUrl)
+        val file = try {
+          tmpFile(templateUrl)
+        } catch {
+          case ex: FileNotFoundException =>
+            logger.error(s"Template can not be found in $templateUrl,  in this case will be used default template from resources.")
+            tmpFile("default-template.mustache")
+        }
+
+        val mustache = mustacheFactory.compile(file.getAbsolutePath)
+
+        val nodes = configuration.nodes.map { node =>
           val hash =
             if (hashType == "java")
               Integer.toHexString((node.host + node.port + secretKey).hashCode)
@@ -81,17 +122,23 @@ class ConfigurationGenerator(mustache: Mustache,
         if (nodes.nonEmpty) {
           mustache.execute(
             new FileWriter(confFile),
-            MustacheModel.Config(serviceName, serviceName.replace("-", "_"), nodes)
+            Array(
+              MustacheModel.Config(serviceName, serviceName.replace("-", "_"), nodes),
+              configuration.additionalParams.asJava
+            )
           ).close()
 
         } else {
           mustache.execute(
             new FileWriter(confFile),
             // If there is not any records for a service, we set default IP address
-            MustacheModel.Config(
-              serviceName,
-              serviceName.replace("-", "_"),
-              Seq(MustacheModel.Node(defaultServer, defaultPort, Integer.toHexString((defaultServer + ":" + defaultPort).hashCode))).toArray
+            Array(
+              MustacheModel.Config(
+                serviceName,
+                serviceName.replace("-", "_"),
+                Seq(MustacheModel.Node(defaultServer, defaultPort, Integer.toHexString((defaultServer + ":" + defaultPort).hashCode))).toArray
+              ),
+              configuration.additionalParams.asJava
             )
           ).close()
         }
@@ -100,15 +147,15 @@ class ConfigurationGenerator(mustache: Mustache,
         nginxManager ! NginxManager.Refresh
       }
 
-    case ConfigurationGenerator.SetConfigurations(services) =>
-      configuration.foreach { case (serviceName, _) =>
-        if (!services.contains(serviceName)) {
-          ConfigurationGenerator.SetConfiguration(serviceName, Set())
+    case ConfigurationGenerator.SetConfigurations(configurations) =>
+      configurationCache.foreach { case (serviceName, _) =>
+        if (!configurations.exists(_.serviceName == serviceName)) {
+          ConfigurationGenerator.SetConfiguration(ConfigurationGenerator.Configuration(serviceName, Set(), Map()))
         }
       }
 
-      services.toSeq.foreach { case (serviceName, nodes) =>
-        self ! ConfigurationGenerator.SetConfiguration(serviceName, nodes)
+      configurations.foreach { configuration =>
+        self ! ConfigurationGenerator.SetConfiguration(configuration)
       }
   }
 }

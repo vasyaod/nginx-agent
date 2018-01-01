@@ -48,6 +48,6 @@ class DnsResolver(resolver: DnsSrvResolver,
         )
       }
 
-      configurationGenerator ! ConfigurationGenerator.SetConfiguration(serviceName, nodes)
+      configurationGenerator ! ConfigurationGenerator.SetConfiguration(ConfigurationGenerator.Configuration(serviceName, nodes, Map()))
   }
 }
