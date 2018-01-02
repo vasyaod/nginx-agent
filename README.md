@@ -14,14 +14,8 @@ was used for discovering instead of Apache Zookeeper.
 
 ## Getting started
 
- 1. Run https://github.com/mesosphere/playa-mesos by vagrand
- 2. Run load balancer by   
- 'curl -X POST http://10.141.141.10:8080/v2/apps -d @nginx-balancer-marathon.json -H "Content-type: application/json"'
- 3. Run test service with given name "hello-world-service"   
- 'curl -X POST http://10.141.141.10:8080/v2/apps -d @hello-world-service-marathon.json -H "Content-type: application/json"'
- 4. Check this out: http://hello-world-service.f-proj.com . In this case domain name hello-world-service.f-proj.com is 
- just alias of 10.141.141.10
-
+ * [Getting started with Marathon](/docs/getting-started-marathon-api.md)
+ 
 ## Building and setup
 
  * `git clone git@github.com:vasyaod/nginx-agent.git`

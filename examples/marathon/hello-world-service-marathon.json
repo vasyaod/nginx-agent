@@ -14,7 +14,7 @@
       "image": "crccheck/hello-world",
       "network": "BRIDGE",
       "portMappings": [
-        {"containerPort": 8000, "hostPort": 31001 }
+        {"containerPort": 8000, "hostPort": 0 }
       ],
       "forcePullImage": true
     }
