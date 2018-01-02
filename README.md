@@ -12,7 +12,15 @@ configure NGINX directly from marathon json.
 The project was inspired by https://github.com/Xorlev/gatekeeper but the one has quite wide ability since DNS
 was used for discovering instead of Apache Zookeeper.
 
-##Building and setup
+## Getting started
+
+ 1. Run https://github.com/mesosphere/playa-mesos by vagrand
+ 2. Run load balancer by   
+ 'curl -X POST http://10.141.141.10:8080/v2/apps -d @nginx-balancer-marathon.json -H "Content-type: application/json"'
+ 3. Run test service with given name "hello-world-service"   
+ 'curl -X POST http://10.141.141.10:8080/v2/apps -d @hello-world-service-marathon.json -H "Content-type: application/json"'
+
+## Building and setup
 
  * `git clone git@github.com:vasyaod/nginx-agent.git`
  * `mvn install`
@@ -23,6 +31,10 @@ was used for discovering instead of Apache Zookeeper.
  * Run the app by `java -Dconfig.file=nginx-agent.conf -cp "target/lib/*" ru.mobak.nginxagent.App` where `nginx-agent.conf` is
    our configuration for Nginx Agent.
 
+## Building Docker image for Marathon API
+
+ * `docker build -t vasyaod/nginx-balancer .`
+ 
 ## Principal
 
 Assume there is some service (in this example the service is called as `battle-dev`) with following configuration of nodes:
@@ -97,6 +109,12 @@ nginx-agent {
 ```
 nginx-agent {
 
+  # Command which refreshs configuration to Nginx.
+  # There are two variants:
+  #  - nginx -s reload
+  #  - kill -HUP {PID}
+  reload-command="nginx -s reload"
+
   # Path to file that contains PID of Nginx. This option needs for refreshing configuration of Nginx in runtime by
   # sending signal.
   nginx-pid-file="/var/run/nginx.pid"
@@ -140,7 +158,7 @@ nginx-agent {
   # Configuration for marathon resolver
   marathon = {
     # List of marathon nodes.
-    urls = ["127.0.0.1:8080"]
+    urls = "marathon.mesos:8080,127.0.0.1:8080"
 
     # Period (seconds) between requests to marathon API.
     refresh-period = 5

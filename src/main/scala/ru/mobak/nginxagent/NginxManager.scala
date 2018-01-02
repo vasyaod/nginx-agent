@@ -11,7 +11,7 @@ object NginxManager {
 }
 
 /** The actor force Nginx to refresh configuration. */
-class NginxManager(pidFile: String) extends Actor with LazyLogging {
+class NginxManager(pidFile: String, reloadCommand: String) extends Actor with LazyLogging {
 
   /** Command for server restarting */
   case object Restart
@@ -28,9 +28,15 @@ class NginxManager(pidFile: String) extends Actor with LazyLogging {
 
     case Restart =>
       logger.info("Nginx configuration refreshing.")
-      val pid = scala.io.Source.fromFile(pidFile).mkString
-      logger.info(s"Nginx pid: $pid")
-      val code = s"kill -HUP $pid".!
+      val code =
+        if (reloadCommand.contains("{PID}")) {
+          val pid = scala.io.Source.fromFile(pidFile).mkString
+          logger.info(s"Nginx pid: $pid")
+          reloadCommand.replace("{PID}", pid).!
+        } else {
+          reloadCommand.!
+        }
+
       logger.info(s"Nginx has returned code: $code")
   }
 }

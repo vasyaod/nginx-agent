@@ -1,0 +1,26 @@
+{
+  "id": "nginx-balancer",
+  "cpus": 0.1,
+  "mem": 0,
+  "instances": 1,
+  "env": {
+    "MARATHON_URLS": "10.141.141.10:8080",
+    "NGINX_AGENT_RESOLVER": "marathon",
+    "BALANCER_ID": "primary"
+  },
+  "container": {
+    "type": "DOCKER",
+    "docker": {
+      "image": "vasyaod/nginx-balancer",
+      "network": "BRIDGE",
+      "portMappings": [
+        {"containerPort": 80, "hostPort": 31002 }
+      ],
+      "forcePullImage": true
+    }
+  },
+  "upgradeStrategy": {
+    "minimumHealthCapacity": 0,
+    "maximumOverCapacity": 0
+  }
+}

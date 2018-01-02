@@ -1,0 +1,26 @@
+{
+  "id": "hello-world-service",
+  "cpus": 0.1,
+  "mem": 0,
+  "instances": 1,
+  "labels": {
+    "BALANCER": "primary",
+    "BALANCER_PARAM_SERVER_CONFIG": "TRUE",
+    "BALANCER_PARAM_SERVER_NAME": "hello-world-service.f-proj.com"
+  },
+  "container": {
+    "type": "DOCKER",
+    "docker": {
+      "image": "crccheck/hello-world",
+      "network": "BRIDGE",
+      "portMappings": [
+        {"containerPort": 8000, "hostPort": 31001 }
+      ],
+      "forcePullImage": true
+    }
+  },
+  "upgradeStrategy": {
+    "minimumHealthCapacity": 0,
+    "maximumOverCapacity": 0
+  }
+}

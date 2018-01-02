@@ -18,7 +18,7 @@ trait MarathonApi {
   def allNodes(url: String, urls: List[String])
 }
 
-object MarathonApi {
+object MarathonApi extends LazyLogging {
 
   /** App description */
   case class App(id: String, labels: Map[String, String])
@@ -29,7 +29,7 @@ object MarathonApi {
   case class HealthCheckResult(alive: Boolean)
 
   /** Task description for some app */
-  case class Task(host: String, ports: Seq[Int], healthCheckResults: Seq[HealthCheckResult])
+  case class Task(host: String, ports: Seq[Int], healthCheckResults: Option[Seq[HealthCheckResult]])
 
   /** List of tasks for some app */
   case class Tasks(tasks: Seq[Task])
@@ -104,15 +104,18 @@ object MarathonApi {
     for {
       apps <- apps(urls)
       services <- Future.sequence(
-        apps.apps.map(app => tasks(app.id, urls).map { tasks =>
-          Service(app.id, app.labels, tasks.tasks.flatMap { task =>
-            val isHealth = task.healthCheckResults.foldLeft(true)((acc, x) => x.alive && acc)
-            if(task.ports.nonEmpty && isHealth)
-              Some(Node(task.host, task.ports.head))
-            else
-              None
-          })
-        })
+        apps.apps.map { app =>
+          tasks(app.id, urls).map { tasks =>
+            Service(app.id, app.labels, tasks.tasks.flatMap { task =>
+              val isHealth = task.healthCheckResults.toSeq.flatMap(x => x).foldLeft(true)((acc, x) => x.alive && acc)
+              if(task.ports.nonEmpty && isHealth) {
+                Some(Node(task.host, task.ports.head))
+              } else {
+                None
+              }
+            })
+          }
+        }
       )
     } yield services
   }
@@ -147,10 +150,12 @@ class MarathonResolver(marathonUrls: List[String],
       implicit val as = context.system
       implicit val ec = context.dispatcher
 
-      MarathonApi.allNodes(marathonUrls).foreach { rawServices =>
+      val fOfservices = MarathonApi.allNodes(marathonUrls)
+      fOfservices.foreach { rawServices =>
         val res = rawServices.flatMap { service =>
           val serviceId = (if (service.id.startsWith("/")) service.id.drop(1) else service.id).split("/").reverse.mkString("-")
           if (registredServices.contains(serviceId) || service.labels.get("BALANCER") == Some(balancerId)) {
+
             val additionalParams = service.labels.flatMap { case (key, value) =>
               val prefix = "BALANCER_PARAM_"
               if (key.startsWith(prefix)) {
@@ -186,6 +191,11 @@ class MarathonResolver(marathonUrls: List[String],
         }
 
         configurationGenerator ! ConfigurationGenerator.SetConfigurations(res.toSet)
+      }
+
+      fOfservices.onFailure {
+        case ex: Exception =>
+          logger.error("Error of receiving marathon nodes", ex)
       }
   }
 }

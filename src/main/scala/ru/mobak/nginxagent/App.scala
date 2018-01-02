@@ -19,7 +19,8 @@ object App extends App with LazyLogging {
   val as = ActorSystem()
 
   val nginxManager = as.actorOf(Props(new NginxManager(
-    App.config.getString("nginx-agent.nginx-pid-file")
+    config.getString("nginx-agent.nginx-pid-file"),
+    config.getString("nginx-agent.reload-command")
   )))
 
   val configurationGenerator = as.actorOf(Props(new ConfigurationGenerator(
@@ -59,10 +60,11 @@ object App extends App with LazyLogging {
     }
 
   } else {
-    logger.info("Marathon resolver has been initialized for marathon nodes: {}", config.getStringList("nginx-agent.marathon.urls").asScala.toList.mkString(","))
+    val marathonUrls = config.getString("nginx-agent.marathon.urls").split(",").toList.map(_.trim)
+    logger.info("Marathon resolver has been initialized for marathon nodes: {}", marathonUrls.mkString(","))
 
     as.actorOf(Props(new MarathonResolver(
-      marathonUrls = config.getStringList("nginx-agent.marathon.urls").asScala.toList,
+      marathonUrls = marathonUrls,
       registredServices = config.getStringList("nginx-agent.services").asScala.toList,
       updatePeriod = config.getInt("nginx-agent.marathon.refresh-period"),
       balancerId = config.getString("nginx-agent.marathon.balancer-id"),
