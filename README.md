@@ -19,6 +19,8 @@ was used for discovering instead of Apache Zookeeper.
  'curl -X POST http://10.141.141.10:8080/v2/apps -d @nginx-balancer-marathon.json -H "Content-type: application/json"'
  3. Run test service with given name "hello-world-service"   
  'curl -X POST http://10.141.141.10:8080/v2/apps -d @hello-world-service-marathon.json -H "Content-type: application/json"'
+ 4. Check this out: http://hello-world-service.f-proj.com . In this case domain name hello-world-service.f-proj.com is 
+ just alias of 10.141.141.10
 
 ## Building and setup
 

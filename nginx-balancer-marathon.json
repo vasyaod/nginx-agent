@@ -12,10 +12,7 @@
     "type": "DOCKER",
     "docker": {
       "image": "vasyaod/nginx-balancer",
-      "network": "BRIDGE",
-      "portMappings": [
-        {"containerPort": 80, "hostPort": 31002 }
-      ],
+      "network": "HOST",
       "forcePullImage": true
     }
   },
